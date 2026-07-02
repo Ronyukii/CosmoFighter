@@ -20,10 +20,14 @@ public class EnemyMovement : MonoBehaviour
             // 1. Destroy the bullet object
             Destroy(other.gameObject);
 
+            if (GameManager.Instance != null)
+            {
+                // Award points to the player for destroying this enemy
+                GameManager.Instance.AddScore(10);
+            }
+
             // 2. Destroy this enemy object
             Destroy(gameObject);
-
-            // TODO: Add points to the scoring system here later!
         }
     }
 

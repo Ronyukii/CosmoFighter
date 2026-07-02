@@ -14,6 +14,10 @@ public class PlayerController : MonoBehaviour
     public float fireRate = 0.15f;
     private float nextFireTime;
 
+    [Header("Health System")]
+    public int maxHealth = 3;
+    private int currentHealth;
+
     private Vector2 screenBounds;
     private float objectWidth;
     private float objectHeight;
@@ -34,6 +38,12 @@ public class PlayerController : MonoBehaviour
         {
             objectWidth = spriteRenderer.bounds.extents.x;
             objectHeight = spriteRenderer.bounds.extents.y;
+        }
+
+        currentHealth = maxHealth;
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateHealthUI(currentHealth);
         }
     }
 
@@ -76,5 +86,40 @@ public class PlayerController : MonoBehaviour
                 bulletRb.linearVelocity = Vector2.up * bulletSpeed;
             }
         }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        // If an enemy ship hits the player directly
+        if (other.CompareTag("Enemy"))
+        {
+            TakeDamage(1);
+            Destroy(other.gameObject); // Destroy the crashing enemy
+        }
+    }
+
+    public void TakeDamage(int damageAmount)
+    {
+        currentHealth -= damageAmount;
+        if (currentHealth < 0) currentHealth = 0;
+
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateHealthUI(currentHealth);
+        }
+
+        if (currentHealth <= 0)
+        {
+            Die();
+        }
+    }
+
+    void Die()
+    {
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowGameOverScreen();
+        }
+        Destroy(gameObject); // Remove the player ship from the board
     }
 }
