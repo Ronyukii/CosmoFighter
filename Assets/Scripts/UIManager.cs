@@ -9,8 +9,11 @@ public class UIManager : MonoBehaviour
     [Header("Health UI")]
     public TextMeshProUGUI healthText;
 
-    [Header("Screens")]
-    public GameObject gameOverPanel; // The UI screen container
+    [Header("UI Screen Panels")]
+    public GameObject gameOverPanel;
+    public GameObject pauseMenuPanel;
+
+    private bool isPaused = false;
 
     void Awake()
     {
@@ -18,6 +21,61 @@ public class UIManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    void Update()
+    {
+        // Listen for the Escape key to toggle the pause menu
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            // Only allow pausing if the game isn't already over
+            if (gameOverPanel != null && !gameOverPanel.activeSelf)
+            {
+                TogglePause();
+            }
+        }
+    }
+
+    // --- PAUSE MENU LOGIC ---
+    public void TogglePause()
+    {
+        isPaused = !isPaused;
+
+        if (pauseMenuPanel != null)
+        {
+            pauseMenuPanel.SetActive(isPaused);
+        }
+
+        // Freeze time when paused, unfreeze when continuing
+        Time.timeScale = isPaused ? 0f : 1f;
+    }
+
+    public void ContinueGame()
+    {
+        if (isPaused)
+        {
+            TogglePause();
+        }
+    }
+
+    // --- CORE SCENE NAVIGATION ---
+    public void RestartGame()
+    {
+        Time.timeScale = 1f; // Ensure time is unfrozen before reloading
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void ReturnToMainMenu()
+    {
+        Time.timeScale = 1f; // Ensure time is unfrozen before leaving
+        SceneManager.LoadScene("MainMenu"); // Make sure this matches your scene name exactly
+    }
+
+    public void QuitGame()
+    {
+        Debug.Log("Quitting application...");
+        Application.Quit(); // Works in the final built version of the game
+    }
+
+    // --- GAME OVER LOGIC ---
     public void UpdateHealthUI(int currentHealth)
     {
         if (healthText != null)
@@ -33,18 +91,10 @@ public class UIManager : MonoBehaviour
             gameOverPanel.SetActive(true);
         }
 
-        // Stop spawning enemies when game is over
         SpawnManager spawnManager = Object.FindFirstObjectByType<SpawnManager>();
         if (spawnManager != null)
         {
             spawnManager.StopSpawning();
         }
-    }
-
-    // This method will be linked to your UI Restart button
-    public void RestartGame()
-    {
-        // Reloads the currently active scene
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
