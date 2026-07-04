@@ -90,11 +90,17 @@ public class PlayerController : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // If an enemy ship hits the player directly
+        // If an enemy ship hits the player physically
         if (other.CompareTag("Enemy"))
         {
             TakeDamage(1);
-            Destroy(other.gameObject); // Destroy the crashing enemy
+            Destroy(other.gameObject);
+        }
+        // New block: If an enemy energy pellet strikes the ship
+        else if (other.CompareTag("EnemyBullet"))
+        {
+            TakeDamage(1);
+            Destroy(other.gameObject); // Clean up the bullet pellet
         }
     }
 

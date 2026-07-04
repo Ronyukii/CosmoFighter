@@ -42,4 +42,9 @@ public class GameManager : MonoBehaviour
             scoreText.text = "SCORE: " + currentScore;
         }
     }
+
+    public int GetCurrentScore()
+    {
+        return currentScore;
+    }
 }

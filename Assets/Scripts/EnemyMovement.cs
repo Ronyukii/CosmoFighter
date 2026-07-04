@@ -15,7 +15,7 @@ public class EnemyMovement : MonoBehaviour
     public float sideMovementRange = 2f;
 
     [Header("Combat & Danmaku")]
-    public GameObject enemyBulletPrefab; // Create an enemy bullet prefab!
+    public GameObject EnemyBullet; // Create an enemy bullet prefab!
     public float fireRate = 2f;
     public float bulletSpeed = 5f;
 
@@ -77,7 +77,7 @@ public class EnemyMovement : MonoBehaviour
 
     void ExecuteAttackPattern()
     {
-        if (enemyBulletPrefab == null) return;
+        if (EnemyBullet == null) return;
 
         switch (type)
         {
@@ -107,7 +107,7 @@ public class EnemyMovement : MonoBehaviour
 
     void FireBullet(Vector2 direction)
     {
-        GameObject bullet = Instantiate(enemyBulletPrefab, transform.position, Quaternion.identity);
+        GameObject bullet = Instantiate(EnemyBullet, transform.position, Quaternion.identity);
         Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
         if (rb != null)
         {

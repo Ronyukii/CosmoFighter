@@ -3,11 +3,20 @@ using UnityEngine;
 
 public class SpawnManager : MonoBehaviour
 {
-    [Header("Spawning Configuration")]
-    public GameObject Enemy;
-    public float spawnInterval = 1.5f;
+    [Header("Enemy Prefab Variants")]
+    public GameObject smallEnemyPrefab;
+    public GameObject intermediateEnemyPrefab;
+    public GameObject bossEnemyPrefab;
+
+    [Header("Score Milestones for Progression")]
+    public int intermediateMilestone = 500;
+    public int bossMilestone = 2000;
+
+    [Header("Spawning Controls")]
+    public float baseSpawnInterval = 3f;
     private Vector2 screenBounds;
     private bool isSpawning = true;
+    private bool bossSpawned = false;
 
     void Start()
     {
@@ -17,28 +26,68 @@ public class SpawnManager : MonoBehaviour
             screenBounds = mainCamera.ViewportToWorldPoint(new Vector3(1, 1, Mathf.Abs(mainCamera.transform.position.z)));
         }
 
-        StartCoroutine(SpawnEnemyRoutine());
+        StartCoroutine(SpawnWaveRoutine());
     }
 
-    IEnumerator SpawnEnemyRoutine()
+    IEnumerator SpawnWaveRoutine()
     {
-        // Wait a brief moment before spawning begins
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(2f);
 
         while (isSpawning)
         {
-            // Calculate a random X position within the camera horizontal frame
-            float randomX = Random.Range(-screenBounds.x + 0.5f, screenBounds.x - 0.5f);
-            // Position the spawn location slightly above the top frame border
-            Vector2 spawnPosition = new Vector2(randomX, screenBounds.y + 0.2f);
+            int currentScore = GameManager.Instance != null ? GameManager.Instance.GetCurrentScore() : 0;
 
-            if (Enemy != null)
+            // Phase 3: Boss Encounter Milestone Reached
+            if (currentScore >= bossMilestone)
             {
-                Instantiate(Enemy, spawnPosition, Quaternion.identity);
+                if (!bossSpawned)
+                {
+                    SpawnBoss();
+                }
+                // Pause standard mob spawning completely during the boss fight
+                yield return new WaitForSeconds(5f);
+                continue;
             }
 
-            // Pause execution until the next spawn wave timer cycle hits
-            yield return new WaitForSeconds(spawnInterval);
+            // Determine Spawning Quantities and Mix based on Score
+            float currentSpawnInterval = baseSpawnInterval;
+            GameObject enemyToSpawn = smallEnemyPrefab;
+
+            if (currentScore >= intermediateMilestone)
+            {
+                // Phase 2: Ramping up. 40% chance to spawn Intermediate, 60% chance to spawn Small
+                enemyToSpawn = Random.value > 0.6f ? intermediateEnemyPrefab : smallEnemyPrefab;
+
+                // Reduce the spawn interval to increase the quantity/density of enemies
+                currentSpawnInterval = baseSpawnInterval * 0.6f;
+            }
+            else
+            {
+                // Phase 1: Lowest level enemy only
+                enemyToSpawn = smallEnemyPrefab;
+                currentSpawnInterval = baseSpawnInterval;
+            }
+
+            // Execute the Spawn
+            if (enemyToSpawn != null)
+            {
+                float randomX = Random.Range(-screenBounds.x + 0.8f, screenBounds.x - 0.8f);
+                Vector2 spawnPosition = new Vector2(randomX, screenBounds.y + 0.5f);
+                Instantiate(enemyToSpawn, spawnPosition, Quaternion.identity);
+            }
+
+            yield return new WaitForSeconds(currentSpawnInterval);
+        }
+    }
+
+    void SpawnBoss()
+    {
+        bossSpawned = true;
+        if (bossEnemyPrefab != null)
+        {
+            // Spawn the Boss perfectly dead-center horizontally above the frame
+            Vector2 spawnPosition = new Vector2(0f, screenBounds.y + 1.5f);
+            Instantiate(bossEnemyPrefab, spawnPosition, Quaternion.identity);
         }
     }
 

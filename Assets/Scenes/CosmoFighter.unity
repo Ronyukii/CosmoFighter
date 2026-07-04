@@ -804,8 +804,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8599a5288e22cf4cad05324f3a71360, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SpawnManager
-  Enemy: {fileID: 1120646666433833787, guid: 7a0605c819e6aa5479713bad7418222a, type: 3}
-  spawnInterval: 1.5
+  smallEnemyPrefab: {fileID: 1120646666433833787, guid: 7a0605c819e6aa5479713bad7418222a, type: 3}
+  intermediateEnemyPrefab: {fileID: 1891177196881189042, guid: af3aed9b265ead0438788c995833f8f8, type: 3}
+  bossEnemyPrefab: {fileID: 1225404025201842611, guid: 556b05e7a5741bd4da62311f88360fd9, type: 3}
+  intermediateMilestone: 500
+  bossMilestone: 2000
+  baseSpawnInterval: 3
 --- !u!4 &1046961650
 Transform:
   m_ObjectHideFlags: 0
