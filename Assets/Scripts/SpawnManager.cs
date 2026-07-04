@@ -8,15 +8,17 @@ public class SpawnManager : MonoBehaviour
     public GameObject intermediateEnemyPrefab;
     public GameObject bossEnemyPrefab;
 
-    [Header("Score Milestones for Progression")]
-    public int intermediateMilestone = 500;
-    public int bossMilestone = 2000;
-
-    [Header("Spawning Controls")]
+    [Header("Dynamic Loop Calibration")]
+    public int scoreNeededPerBossCycle = 2000; // How many points the player needs to score to summon the next boss
     public float baseSpawnInterval = 3f;
+
+    private int nextIntermediateMilestone;
+    private int nextBossMilestone;
+    private int bossCycleCount = 0; // Tracks how many bosses have been beaten to ramp up difficulty
+
     private Vector2 screenBounds;
     private bool isSpawning = true;
-    private bool bossSpawned = false;
+    private bool bossIsActive = false;
 
     void Start()
     {
@@ -26,15 +28,27 @@ public class SpawnManager : MonoBehaviour
             screenBounds = mainCamera.ViewportToWorldPoint(new Vector3(1, 1, Mathf.Abs(mainCamera.transform.position.z)));
         }
 
-        StartCoroutine(SpawnWaveRoutine());
-
-        // If hard mode is selected, double the score milestone requirement for an endurance test
+        // Apply Hard Mode modifiers to the initial launch settings
         if (DifficultyManager.Instance != null && DifficultyManager.Instance.isHardMode)
         {
-            intermediateMilestone = 1000;
-            bossMilestone = 4500;
-            baseSpawnInterval = 1.8f; // Spawns enemies significantly faster right from the start
+            scoreNeededPerBossCycle = 4000; // Hard requires double the endurance gap per loop
+            baseSpawnInterval = 1.8f;      // Much more aggressive baseline density
         }
+
+        CalculateNextMilestones();
+        StartCoroutine(SpawnWaveRoutine());
+    }
+
+    // Calculates milestones relative to the player's current progression loop
+    void CalculateNextMilestones()
+    {
+        int currentScore = GameManager.Instance != null ? GameManager.Instance.GetCurrentScore() : 0;
+
+        // Intermediate ships mix in halfway through the current boss cycle
+        nextIntermediateMilestone = currentScore + (scoreNeededPerBossCycle / 4);
+        nextBossMilestone = currentScore + scoreNeededPerBossCycle;
+
+        bossIsActive = false;
     }
 
     IEnumerator SpawnWaveRoutine()
@@ -45,38 +59,46 @@ public class SpawnManager : MonoBehaviour
         {
             int currentScore = GameManager.Instance != null ? GameManager.Instance.GetCurrentScore() : 0;
 
-            // Phase 3: Boss Encounter Milestone Reached
-            if (currentScore >= bossMilestone)
+            // Phase 3: Boss Time!
+            if (currentScore >= nextBossMilestone)
             {
-                if (!bossSpawned)
+                if (!bossIsActive)
                 {
                     SpawnBoss();
                 }
-                // Pause standard mob spawning completely during the boss fight
-                yield return new WaitForSeconds(5f);
+                // Yield the coroutine frame and wait. DO NOT spawn regular enemies while the boss rules the screen.
+                yield return new WaitForSeconds(1f);
                 continue;
             }
 
-            // Determine Spawning Quantities and Mix based on Score
+            // If a boss is alive but the score hasn't updated past the milestone yet, hold fire
+            if (bossIsActive)
+            {
+                yield return new WaitForSeconds(1f);
+                continue;
+            }
+
+            // Phase 1 & 2: Dynamic Standard Waves
             float currentSpawnInterval = baseSpawnInterval;
             GameObject enemyToSpawn = smallEnemyPrefab;
 
-            if (currentScore >= intermediateMilestone)
-            {
-                // Phase 2: Ramping up. 40% chance to spawn Intermediate, 60% chance to spawn Small
-                enemyToSpawn = Random.value > 0.6f ? intermediateEnemyPrefab : smallEnemyPrefab;
+            // Scale difficulty down dynamically based on how many bosses you've already destroyed
+            // Each successful boss cycle slashes the interval timer down by an extra 15%
+            float speedRampReduction = Mathf.Clamp(1f - (bossCycleCount * 0.15f), 0.4f, 1f);
 
-                // Reduce the spawn interval to increase the quantity/density of enemies
-                currentSpawnInterval = baseSpawnInterval * 0.6f;
+            if (currentScore >= nextIntermediateMilestone)
+            {
+                // Mix in Intermediate units (50/50 odds) at faster rates
+                enemyToSpawn = Random.value > 0.5f ? intermediateEnemyPrefab : smallEnemyPrefab;
+                currentSpawnInterval = baseSpawnInterval * 0.5f * speedRampReduction;
             }
             else
             {
-                // Phase 1: Lowest level enemy only
+                // Scouts only
                 enemyToSpawn = smallEnemyPrefab;
-                currentSpawnInterval = baseSpawnInterval;
+                currentSpawnInterval = baseSpawnInterval * speedRampReduction;
             }
 
-            // Execute the Spawn
             if (enemyToSpawn != null)
             {
                 float randomX = Random.Range(-screenBounds.x + 0.8f, screenBounds.x - 0.8f);
@@ -90,13 +112,30 @@ public class SpawnManager : MonoBehaviour
 
     void SpawnBoss()
     {
-        bossSpawned = true;
+        bossIsActive = true;
         if (bossEnemyPrefab != null)
         {
-            // Spawn the Boss perfectly dead-center horizontally above the frame
             Vector2 spawnPosition = new Vector2(0f, screenBounds.y + 1.5f);
-            Instantiate(bossEnemyPrefab, spawnPosition, Quaternion.identity);
+            GameObject bossInstance = Instantiate(bossEnemyPrefab, spawnPosition, Quaternion.identity);
+
+            // Start monitoring when this specific boss is destroyed by the player
+            StartCoroutine(TrackBossDeath(bossInstance));
         }
+    }
+
+    IEnumerator TrackBossDeath(GameObject bossObject)
+    {
+        // Keep waiting as long as the boss GameObject exists in the scene
+        while (bossObject != null)
+        {
+            yield return null;
+        }
+
+        // --- THE BOSS HAS FALLEN ---
+        bossCycleCount++;
+
+        // Recalculate new milestones relative to our new higher score baseline!
+        CalculateNextMilestones();
     }
 
     public void StopSpawning()

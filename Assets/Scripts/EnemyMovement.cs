@@ -10,9 +10,9 @@ public class EnemyMovement : MonoBehaviour
     private int currentHealth;
 
     [Header("Movement Profiles")]
-    public float entrySpeed = 3f;
+    public float entryDuration = 1.5f; // Time in seconds it takes to reach their spot
     public float sideSpeed = 2f;
-    public float sideMovementRange = 2f;
+    public float sideMovementRange = 2.5f;
 
     [Header("Combat & Danmaku")]
     public GameObject enemyBulletPrefab;
@@ -22,7 +22,16 @@ public class EnemyMovement : MonoBehaviour
     private float nextFireTime;
     private float stopYPosition;
     private float startXPosition;
+
+    // Smooth Entry and Invincibility trackers
+    private Vector3 spawnPosition;
+    private Vector3 targetBattlePosition;
+    private float entryProgress = 0f;
     private bool hasReachedBattleZone = false;
+    private bool isInvincible = true;
+
+    // Components
+    private SpriteRenderer spriteRenderer;
 
     // Pattern tracking variables
     private int attackPatternCycle = 0;
@@ -30,27 +39,25 @@ public class EnemyMovement : MonoBehaviour
 
     void Start()
     {
+        spriteRenderer = GetComponent<SpriteRenderer>();
         startXPosition = transform.position.x;
-        nextFireTime = Time.time + Random.Range(0.5f, 1.5f);
+        spawnPosition = transform.position;
 
         // Calculate Hard Mode scaling multipliers
         float healthMultiplier = 1f;
-        float speedMultiplier = 1f;
         float attackSpeedMultiplier = 1f;
 
         if (DifficultyManager.Instance != null && DifficultyManager.Instance.isHardMode)
         {
-            healthMultiplier = 1.5f;       // 50% more HP (Endurance test)
-            speedMultiplier = 1.3f;        // Faster moving enemies
-            attackSpeedMultiplier = 1.4f;  // Shorter window between shots
-            bulletSpeed *= 1.4f;           // Faster, harder-to-dodge bullets
+            healthMultiplier = 1.5f;
+            attackSpeedMultiplier = 1.4f;
+            bulletSpeed *= 1.4f;
         }
 
         currentHealth = Mathf.RoundToInt(maxHealth * healthMultiplier);
-        entrySpeed *= speedMultiplier;
-        sideSpeed *= speedMultiplier;
         fireRate /= attackSpeedMultiplier;
 
+        // Calculate the exact target y-position inside screen bounds
         Camera mainCamera = Camera.main;
         if (mainCamera != null)
         {
@@ -63,6 +70,16 @@ public class EnemyMovement : MonoBehaviour
             else
                 stopYPosition = Random.Range(screenBounds.y - 4.5f, screenBounds.y - 2.0f);
         }
+
+        targetBattlePosition = new Vector3(startXPosition, stopYPosition, transform.position.z);
+
+        // Give the enemy a slight semi-transparent alpha tint at start to show invincibility visual feedback
+        if (spriteRenderer != null)
+        {
+            Color c = spriteRenderer.color;
+            c.a = 0.5f;
+            spriteRenderer.color = c;
+        }
     }
 
     void Update()
@@ -73,7 +90,7 @@ public class EnemyMovement : MonoBehaviour
         {
             ExecuteAttackPattern();
             nextFireTime = Time.time + fireRate;
-            attackPatternCycle++; // Rotate to the next attack state
+            attackPatternCycle++;
         }
     }
 
@@ -81,14 +98,32 @@ public class EnemyMovement : MonoBehaviour
     {
         if (!hasReachedBattleZone)
         {
-            transform.Translate(Vector2.down * entrySpeed * Time.deltaTime, Space.World);
-            if (transform.position.y <= stopYPosition)
+            // Smoothly interpolate from spawn position to target battle position over entryDuration
+            entryProgress += Time.deltaTime / entryDuration;
+
+            // SmoothStep creates an elegant ease-out cushion effect upon arrival
+            float smoothT = Mathf.SmoothStep(0f, 1f, entryProgress);
+            transform.position = Vector3.Lerp(spawnPosition, targetBattlePosition, smoothT);
+
+            if (entryProgress >= 1f)
             {
+                // Arrived safely! Turn off invincibility and begin combat behaviors
                 hasReachedBattleZone = true;
+                isInvincible = false;
+                nextFireTime = Time.time + Random.Range(0.2f, 0.6f); // Slight reaction delay before first shot
+
+                // Restore solid full color so the player knows they are now vulnerable
+                if (spriteRenderer != null)
+                {
+                    Color c = spriteRenderer.color;
+                    c.a = 1f;
+                    spriteRenderer.color = c;
+                }
             }
         }
         else
         {
+            // Horizontal strafing pattern once locked in place on screen
             float newX = startXPosition + Mathf.Sin(Time.time * sideSpeed) * sideMovementRange;
             transform.position = new Vector3(newX, transform.position.y, transform.position.z);
         }
@@ -105,16 +140,13 @@ public class EnemyMovement : MonoBehaviour
                 break;
 
             case EnemyType.Intermediate:
-                // Alternates between 2 distinct patterns
                 if (attackPatternCycle % 2 == 0)
                 {
-                    // Pattern A: Dual shot spread
                     FireBullet(new Vector2(-0.3f, -1f).normalized);
                     FireBullet(new Vector2(0.3f, -1f).normalized);
                 }
                 else
                 {
-                    // Pattern B: Concentrated 3-Stream Burst
                     FireBullet(Vector2.down);
                     FireBullet(new Vector2(-0.15f, -1f).normalized);
                     FireBullet(new Vector2(0.15f, -1f).normalized);
@@ -122,12 +154,10 @@ public class EnemyMovement : MonoBehaviour
                 break;
 
             case EnemyType.Boss:
-                // Cycles through 3 diverse bullet hell behaviors
                 int patternSelection = attackPatternCycle % 3;
 
                 if (patternSelection == 0)
                 {
-                    // Pattern 1: Dense Circular Nova Ring
                     int bulletCount = DifficultyManager.Instance != null && DifficultyManager.Instance.isHardMode ? 16 : 10;
                     for (int i = 0; i < bulletCount; i++)
                     {
@@ -138,7 +168,6 @@ public class EnemyMovement : MonoBehaviour
                 }
                 else if (patternSelection == 1)
                 {
-                    // Pattern 2: Aimed Spiral Stream
                     spiralAngleOffset += 25;
                     for (int i = 0; i < 4; i++)
                     {
@@ -149,7 +178,6 @@ public class EnemyMovement : MonoBehaviour
                 }
                 else if (patternSelection == 2)
                 {
-                    // Pattern 3: Chaotic Screen Sweep Wall
                     float leftBound = -1.5f;
                     for (int i = 0; i < 5; i++)
                     {
@@ -175,8 +203,13 @@ public class EnemyMovement : MonoBehaviour
     {
         if (other.CompareTag("Bullet"))
         {
+            // Clean up player laser immediately on impact, but ignore taking damage if still entering
             Destroy(other.gameObject);
-            TakeDamage(1);
+
+            if (!isInvincible)
+            {
+                TakeDamage(1);
+            }
         }
     }
 
