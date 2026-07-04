@@ -188,6 +188,6 @@ MonoBehaviour:
   entrySpeed: 2.5
   sideSpeed: 1.5
   sideMovementRange: 2.5
-  EnemyBullet: {fileID: 7505321744512173028, guid: b7e36b03ea84aea47a378e4b9ddea6ca, type: 3}
+  enemyBulletPrefab: {fileID: 7505321744512173028, guid: b7e36b03ea84aea47a378e4b9ddea6ca, type: 3}
   fireRate: 1.2
   bulletSpeed: 5

@@ -27,6 +27,14 @@ public class SpawnManager : MonoBehaviour
         }
 
         StartCoroutine(SpawnWaveRoutine());
+
+        // If hard mode is selected, double the score milestone requirement for an endurance test
+        if (DifficultyManager.Instance != null && DifficultyManager.Instance.isHardMode)
+        {
+            intermediateMilestone = 1000;
+            bossMilestone = 4500;
+            baseSpawnInterval = 1.8f; // Spawns enemies significantly faster right from the start
+        }
     }
 
     IEnumerator SpawnWaveRoutine()

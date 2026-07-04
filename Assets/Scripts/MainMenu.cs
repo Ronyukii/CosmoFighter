@@ -3,10 +3,21 @@ using UnityEngine.SceneManagement;
 
 public class MainMenu : MonoBehaviour
 {
-    // This function will be called when the Play button is pressed
-    public void PlayGame()
+    public void PlayEasyMode()
     {
-        // Loads the gameplay scene by its name.
+        if (DifficultyManager.Instance != null)
+        {
+            DifficultyManager.Instance.SetDifficulty(false); // Easy Mode selected
+        }
+        SceneManager.LoadScene("CosmoFighter");
+    }
+
+    public void PlayHardMode()
+    {
+        if (DifficultyManager.Instance != null)
+        {
+            DifficultyManager.Instance.SetDifficulty(true);  // Hard Mode selected
+        }
         SceneManager.LoadScene("CosmoFighter");
     }
 }
