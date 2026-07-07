@@ -8,10 +8,15 @@ public class UIManager : MonoBehaviour
 
     [Header("Health UI")]
     public TextMeshProUGUI healthText;
+    public TextMeshProUGUI scoreText;
 
     [Header("UI Screen Panels")]
     public GameObject gameOverPanel;
     public GameObject pauseMenuPanel;
+
+    [Header("Score Breakdown Text Slots")]
+    public TextMeshProUGUI finalScoreText;
+    public TextMeshProUGUI finalBestScoreText;
 
     private bool isPaused = false;
 
@@ -19,6 +24,11 @@ public class UIManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+    }
+
+    public void UpdateScoreUI(int currentScore)
+    {
+        if (scoreText != null) scoreText.text = "SCORE: " + currentScore;
     }
 
     void Update()
@@ -91,10 +101,20 @@ public class UIManager : MonoBehaviour
             gameOverPanel.SetActive(true);
         }
 
-        SpawnManager spawnManager = Object.FindFirstObjectByType<SpawnManager>();
-        if (spawnManager != null)
+        // Freeze time scale and grab final details
+        Time.timeScale = 0f;
+
+        if (GameManager.Instance != null)
         {
-            spawnManager.StopSpawning();
+            int recentScore = GameManager.Instance.GetCurrentScore();
+            int allTimeBest = GameManager.Instance.GetHighScore();
+
+            // Format our text readouts for the recent game results panel
+            if (finalScoreText != null) finalScoreText.text = "CURRENT SCORE: " + recentScore;
+            if (finalBestScoreText != null) finalBestScoreText.text = "ALL-TIME BEST: " + allTimeBest;
         }
+
+        SpawnManager spawnManager = Object.FindFirstObjectByType<SpawnManager>();
+        if (spawnManager != null) spawnManager.StopSpawning();
     }
 }

@@ -1,50 +1,46 @@
 using UnityEngine;
-using TMPro;
 
 public class GameManager : MonoBehaviour
 {
-    // A globally accessible instance so other scripts can easily award points
     public static GameManager Instance { get; private set; }
 
-    [Header("Scoring System")]
-    public TextMeshProUGUI scoreText;
     private int currentScore = 0;
+    private const string HighScoreKey = "CosmoFighter_HighScore"; // Unique save key for PlayerPrefs
 
     void Awake()
     {
-        // Enforce a strict Singleton pattern structure
-        if (Instance == null)
-        {
-            Instance = this;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
-    void Start()
-    {
-        UpdateScoreUI();
-    }
-
-    // Call this method from other scripts to grant performance score points
     public void AddScore(int points)
     {
         currentScore += points;
-        UpdateScoreUI();
+
+        // Update the HUD display in real-time
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.UpdateScoreUI(currentScore);
+        }
+
+        // Check and save high score instantly if broken
+        CheckAndSaveHighScore();
     }
 
-    void UpdateScoreUI()
+    private void CheckAndSaveHighScore()
     {
-        if (scoreText != null)
+        int savedHighScore = PlayerPrefs.GetInt(HighScoreKey, 0);
+        if (currentScore > savedHighScore)
         {
-            scoreText.text = "SCORE: " + currentScore;
+            PlayerPrefs.SetInt(HighScoreKey, currentScore);
+            PlayerPrefs.Save(); // Writes the data to the local disk disk
         }
     }
 
-    public int GetCurrentScore()
+    public int GetCurrentScore() => currentScore;
+
+    public int GetHighScore()
     {
-        return currentScore;
+        return PlayerPrefs.GetInt(HighScoreKey, 0);
     }
 }

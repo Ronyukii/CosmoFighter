@@ -1,23 +1,43 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using SceneManagement = UnityEngine.SceneManagement.SceneManager;
+using TMPro;
 
 public class MainMenu : MonoBehaviour
 {
+    [Header("UI Text Components")]
+    public TextMeshProUGUI mainMenuBestScoreText;
+
+    void Start()
+    {
+        // Load the persistent high score when the player boots up the game
+        int savedHigh = PlayerPrefs.GetInt("CosmoFighter_HighScore", 0);
+
+        if (mainMenuBestScoreText != null)
+        {
+            mainMenuBestScoreText.text = "BEST SCORE: " + savedHigh;
+        }
+    }
+
     public void PlayEasyMode()
     {
         if (DifficultyManager.Instance != null)
         {
-            DifficultyManager.Instance.SetDifficulty(false); // Easy Mode selected
+            DifficultyManager.Instance.isHardMode = false;
         }
-        SceneManager.LoadScene("CosmoFighter");
+        SceneManagement.LoadScene("CosmoFighter"); // Replace with your gameplay scene name
     }
 
     public void PlayHardMode()
     {
         if (DifficultyManager.Instance != null)
         {
-            DifficultyManager.Instance.SetDifficulty(true);  // Hard Mode selected
+            DifficultyManager.Instance.isHardMode = true;
         }
-        SceneManager.LoadScene("CosmoFighter");
+        SceneManagement.LoadScene("CosmoFighter");
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
     }
 }
